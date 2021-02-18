@@ -1,0 +1,10 @@
+**/*.DS_Store
+node_modules/
+src/
+tsconfig.json
+.eslintrc.json
+.eslintignore
+.prettierrc.json
+.prettierignore
+.gitignore
+.npmignore

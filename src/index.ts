@@ -1,44 +1,43 @@
-export default class ImageUploader {
-	constructor(quill, options) {
-		this.quill = quill
-		this.options = options
-		this.range = null
+import Quill, { RangeStatic } from 'quill'
 
-		if (typeof this.options.upload !== 'function')
-			console.error(
-				'[Missing config] upload function that returns a promise is required'
-			)
+export type UploadFunction = (file: File) => Promise<string> | string
 
-		this.quill
-			.getModule('toolbar')
-			.addHandler('image', this.selectLocalImage.bind(this))
+export default class UploadImage {
+	private range: RangeStatic | null = null
+	private fileHolder: HTMLInputElement | null = null
 
-		this.handleDrop = this.handleDrop.bind(this)
-		this.handlePaste = this.handlePaste.bind(this)
+	constructor(
+		private readonly quill: Quill,
+		private readonly upload: UploadFunction
+	) {
+		if (typeof upload !== 'function') throw new Error('Missing upload function')
+
+		this.quill.getModule('toolbar').addHandler('image', this.selectLocalImage)
 
 		this.quill.root.addEventListener('drop', this.handleDrop, false)
 		this.quill.root.addEventListener('paste', this.handlePaste, false)
 	}
 
-	selectLocalImage() {
+	selectLocalImage = () => {
 		this.range = this.quill.getSelection()
 		this.fileHolder = document.createElement('input')
+
 		this.fileHolder.setAttribute('type', 'file')
 		this.fileHolder.setAttribute('accept', 'image/*')
 		this.fileHolder.setAttribute('style', 'visibility:hidden')
 
-		this.fileHolder.onchange = this.fileChanged.bind(this)
+		this.fileHolder.addEventListener('change', this.fileChanged)
 
 		document.body.appendChild(this.fileHolder)
-
 		this.fileHolder.click()
 
 		window.requestAnimationFrame(() => {
+			if (!this.fileHolder) return
 			document.body.removeChild(this.fileHolder)
 		})
 	}
 
-	handleDrop = event => {
+	handleDrop = (event: DragEvent) => {
 		event.stopPropagation()
 		event.preventDefault()
 
@@ -87,8 +86,12 @@ export default class ImageUploader {
 		}, 0)
 	}
 
-	handlePaste = event => {
-		const clipboard = event.clipboardData || window.clipboardData
+	handlePaste = (event: ClipboardEvent) => {
+		const clipboard =
+			event.clipboardData ||
+			((window as unknown) as { clipboardData: DataTransfer | null })
+				.clipboardData
+
 		if (!(clipboard && (clipboard.items || clipboard.files))) return
 
 		const items = clipboard.items || clipboard.files
@@ -97,7 +100,7 @@ export default class ImageUploader {
 		for (let i = 0; i < items.length; i++) {
 			if (!IMAGE_MIME_REGEX.test(items[i].type)) continue
 
-			const file = items[i].getAsFile ? items[i].getAsFile() : items[i]
+			const file = 'getAsFile' in items[i] ? items[i].getAsFile() : items[i]
 			if (!file) continue
 
 			this.range = this.quill.getSelection()
@@ -105,21 +108,23 @@ export default class ImageUploader {
 
 			setTimeout(() => {
 				this.range = this.quill.getSelection()
-				this.readAndUploadFile(file)
+				this.readAndUploadFile(file as File)
 			}, 0)
 		}
 	}
 
-	readAndUploadFile = file => {
-		this.options.upload(file).then(this.insertToEditor).catch(console.error)
+	readAndUploadFile = async (file: File) => {
+		this.insertToEditor(await this.upload(file))
 	}
 
 	fileChanged = () => {
-		this.readAndUploadFile(this.fileHolder.files[0])
+		const file = this.fileHolder?.files?.[0]
+		if (file) this.readAndUploadFile(file)
 	}
 
-	insertToEditor = url => {
+	insertToEditor = (url: string) => {
 		const { quill, range } = this
+		if (!range) return
 
 		quill.insertEmbed(range.index, 'image', url, 'user')
 

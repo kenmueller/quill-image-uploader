@@ -1,18 +1,29 @@
 {
 	"name": "quill-upload-image",
-	"version": "1.4.0",
-	"repository": "https://github.com/kenmueller/quill-upload-image.git",
+	"version": "1.5.0",
 	"description": "A module for Quill rich text editor to allow images to be uploaded to a server instead of being base64 encoded",
-	"main": "src/index.js",
+	"main": "lib/index.js",
+	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "npm run build"
+	},
+	"devDependencies": {
+		"@types/quill": "^2.0.5",
+		"@typescript-eslint/eslint-plugin": "^4.15.1",
+		"@typescript-eslint/parser": "^4.15.1",
+		"eslint": "^7.20.0",
+		"eslint-config-prettier": "^7.2.0",
+		"eslint-plugin-prettier": "^3.3.1",
+		"prettier": "^2.2.1",
+		"typescript": "^4.1.5"
+	},
+	"repository": "https://github.com/kenmueller/quill-upload-image.git",
 	"keywords": [
 		"quill",
 		"quilljs",
 		"image",
 		"upload"
 	],
-	"peerDependencies": {
-		"quill": "^1.3.7"
-	},
-	"author": "",
+	"author": "Ken Mueller",
 	"license": "MIT"
 }
