@@ -1,6 +1,9 @@
 import Quill, { RangeStatic } from 'quill'
 
-export type UploadFunction = (file: File) => Promise<string> | string
+export interface UploadImageOptions {
+	upload(file: File): Promise<string> | string
+	onError?(error: unknown): void
+}
 
 export default class UploadImage {
 	private range: RangeStatic | null = null
@@ -8,9 +11,10 @@ export default class UploadImage {
 
 	constructor(
 		private readonly quill: Quill,
-		private readonly upload: UploadFunction
+		private readonly options: UploadImageOptions
 	) {
-		if (typeof upload !== 'function') throw new Error('Missing upload function')
+		if (typeof options.upload !== 'function')
+			throw new Error('Missing upload function')
 
 		this.quill.getModule('toolbar').addHandler('image', this.selectLocalImage)
 
@@ -114,7 +118,13 @@ export default class UploadImage {
 	}
 
 	readAndUploadFile = async (file: File) => {
-		this.insertToEditor(await this.upload(file))
+		const { upload, onError } = this.options
+
+		try {
+			this.insertToEditor(await upload(file))
+		} catch (error) {
+			;(onError ?? console.error)(error)
+		}
 	}
 
 	fileChanged = () => {
